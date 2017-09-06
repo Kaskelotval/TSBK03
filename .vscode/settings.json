@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "microglut.h": "c",
+        "gl.h": "c",
+        "gl_utilities.h": "c"
+    }
+}
