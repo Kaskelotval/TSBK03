@@ -66,7 +66,7 @@ Model* squareModel;
 //----------------------Globals-------------------------------------------------
 Point3D cam, point;
 Model *model1;
-FBOstruct *fbo1, *fbo2;
+FBOstruct *fbo1, *fbo2, *fbo3;
 GLuint phongshader = 0, plaintextureshader = 0, lowpasshader = 0, add = 0, thres = 0;
 
 //-------------------------------------------------------------------------------------
@@ -92,6 +92,7 @@ void init(void)
 
 	fbo1 = initFBO(W, H, 0);
 	fbo2 = initFBO(W, H, 0);
+	fbo3 = initFBO(W, H, 0);
 
 	// load the model
 //	model1 = LoadModelPlus("teapot.obj");
@@ -142,63 +143,52 @@ void display(void)
 	glUniformMatrix4fv(glGetUniformLocation(phongshader, "projectionMatrix"), 1, GL_TRUE, projectionMatrix.m);
 	glUniformMatrix4fv(glGetUniformLocation(phongshader, "modelviewMatrix"), 1, GL_TRUE, vm2.m);
 	glUniform3fv(glGetUniformLocation(phongshader, "camPos"), 1, &cam.x);
-	glUniform1i(glGetUniformLocation(phongshader, "texUnit"), 0);
+	//glUniform1i(glGetUniformLocation(phongshader, "texUnit"), 0);
 	glUniform1i(glGetUniformLocation(lowpasshader, "horizontal"), 0);
+	glUniform1i(glGetUniformLocation(add,"texUnit"), 0);	
+	glUniform1i(glGetUniformLocation(add,"glow"),1);
+	glUniform1i(glGetUniformLocation(thres,"texUnit"), 0);	
+	glUniform1i(glGetUniformLocation(lowpasshader,"texUnit"), 0);	
 	
 	// Enable Z-buffering
 	glEnable(GL_DEPTH_TEST);
 	// Enable backface culling
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-
 	DrawModel(model1, phongshader, "in_Position", "in_Normal", NULL);
-
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
 	// Done rendering the FBO! Set up for rendering on screen, using the result as texture!
 
-//	glFlush(); // Can cause flickering on some systems. Can also be necessary to make drawing complete.
-	useFBO(0L, fbo1, 0L);
-	glClearColor(0.0, 0.0, 0.0, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//Activate threshold shader
 
-// Activate texture shader program
-	glUseProgram(plaintextureshader);
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-	DrawModel(squareModel, plaintextureshader, "in_Position", NULL, "in_TexCoord");
+	//glClearColor(0.0, 0.0, 0.0, 0);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
+	glUseProgram(thres);
+	useFBO(fbo2, fbo1, 0L);	
+	DrawModel(squareModel, thres, "in_Position", NULL, "in_TexCoord");	
 
 //Activate lowpass shader
+	//glClearColor(0.0, 0.0, 0.0, 0);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		
 	glUseProgram(lowpasshader);
-    // blur bright fragments with two-pass Gaussian Blur 
-    // --------------------------------------------------
     bool horizontal = true;
-	unsigned int amount = 2;
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
+	unsigned int amount = 5;
     for (unsigned int i = 0; i < amount; i++)
     {
-		useFBO(fbo2, fbo1, 0L);
+		useFBO(fbo3, fbo2, 0L);		
 		DrawModel(squareModel, lowpasshader, "in_Position", NULL,"in_TexCoord");
 		horizontal = !horizontal;
-		useFBO(fbo1, fbo2, 0L);
+		useFBO(fbo2, fbo3, 0L);
 		DrawModel(squareModel, lowpasshader, "in_Position", NULL,"in_TexCoord");
-   }
-//Activate threshold shader
-glUseProgram(thres);
-glDisable(GL_CULL_FACE);
-glDisable(GL_DEPTH_TEST);
-DrawModel(squareModel, thres, "in_Position", NULL, "in_TexCoord");	
+   	}
 
 //activate the add-shader
-   glUseProgram(add);
-
-   useFBO(0L, fbo1, fbo2);
-   glClearColor(0.0,0.0,0.0,0);
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-   glUniform1i(glGetUniformLocation(add,"glow"), 1);
-
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
+	//glClearColor(0.0, 0.0, 0.0, 0);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		
+   	glUseProgram(add);
+	useFBO(0L, fbo2, fbo1);
+	  
 	DrawModel(squareModel, add, "in_Position", NULL, "in_TexCoord");
 	glutSwapBuffers();
 }
