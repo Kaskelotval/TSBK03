@@ -66,8 +66,8 @@ Model* squareModel;
 //----------------------Globals-------------------------------------------------
 Point3D cam, point;
 Model *model1;
-FBOstruct *fbo1, *fbo2, *fbo3;
-GLuint phongshader = 0, plaintextureshader = 0, lowpasshader = 0, add = 0, thres = 0;
+FBOstruct *fbo1, *fbo2, *fbo3, *fboFINAL;
+GLuint phongshader = 0, plaintextureshader = 0, lowpassX = 0, lowpassY = 0, add = 0, thres = 0;
 
 //-------------------------------------------------------------------------------------
 
@@ -85,7 +85,9 @@ void init(void)
 	// Load and compile shaders
 	plaintextureshader = loadShaders("plaintextureshader.vert", "plaintextureshader.frag");  // puts texture on teapot
 	phongshader = loadShaders("phong.vert", "phong.frag");  // renders with light (used for initial renderin of teapot)
-	lowpasshader = loadShaders("lowpass.vert", "lowpass.frag"); //Lowpass shader
+	//lowpasshader = loadShaders("lowpass.vert", "lowpass.frag"); //Lowpass shader
+	lowpassX = loadShaders("lowpass.vert", "lowpassX.frag"); //Lowpass shader
+	lowpassY = loadShaders("lowpass.vert", "lowpassY.frag"); //Lowpass shader
 	add = loadShaders("add.vert", "add.frag"); //load shader that combines
 	thres = loadShaders("thres.vert", "thres.frag"); //load shader that creates blooming
 	printError("init shader");
@@ -93,7 +95,8 @@ void init(void)
 	fbo1 = initFBO(W, H, 0);
 	fbo2 = initFBO(W, H, 0);
 	fbo3 = initFBO(W, H, 0);
-
+	fboFINAL = initFBO(W, H, 0);
+	
 	// load the model
 //	model1 = LoadModelPlus("teapot.obj");
 	model1 = LoadModelPlus("stanford-bunny.obj");
@@ -143,12 +146,8 @@ void display(void)
 	glUniformMatrix4fv(glGetUniformLocation(phongshader, "projectionMatrix"), 1, GL_TRUE, projectionMatrix.m);
 	glUniformMatrix4fv(glGetUniformLocation(phongshader, "modelviewMatrix"), 1, GL_TRUE, vm2.m);
 	glUniform3fv(glGetUniformLocation(phongshader, "camPos"), 1, &cam.x);
-	//glUniform1i(glGetUniformLocation(phongshader, "texUnit"), 0);
-	glUniform1i(glGetUniformLocation(lowpasshader, "horizontal"), 0);
-	glUniform1i(glGetUniformLocation(add,"texUnit"), 0);	
-	glUniform1i(glGetUniformLocation(add,"glow"),1);
-	glUniform1i(glGetUniformLocation(thres,"texUnit"), 0);	
-	glUniform1i(glGetUniformLocation(lowpasshader,"texUnit"), 0);	
+	glUniform1i(glGetUniformLocation(phongshader, "texUnit"), 0);
+
 	
 	// Enable Z-buffering
 	glEnable(GL_DEPTH_TEST);
@@ -160,37 +159,55 @@ void display(void)
 	glDisable(GL_DEPTH_TEST);
 	// Done rendering the FBO! Set up for rendering on screen, using the result as texture!
 
+	
 //Activate threshold shader
 
 	//glClearColor(0.0, 0.0, 0.0, 0);
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	glUseProgram(thres);
+	glBindTexture(GL_TEXTURE_2D, fbo1->texid);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
 	useFBO(fbo2, fbo1, 0L);	
 	DrawModel(squareModel, thres, "in_Position", NULL, "in_TexCoord");	
 
 //Activate lowpass shader
-	//glClearColor(0.0, 0.0, 0.0, 0);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		
-	glUseProgram(lowpasshader);
-    bool horizontal = true;
-	unsigned int amount = 5;
+
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+	
+	unsigned int amount = 40;
     for (unsigned int i = 0; i < amount; i++)
     {
+		glUseProgram(lowpassY);		
 		useFBO(fbo3, fbo2, 0L);		
-		DrawModel(squareModel, lowpasshader, "in_Position", NULL,"in_TexCoord");
-		horizontal = !horizontal;
+		DrawModel(squareModel, lowpassY, "in_Position", NULL,"in_TexCoord");
+		
+		glUseProgram(lowpassX);
 		useFBO(fbo2, fbo3, 0L);
-		DrawModel(squareModel, lowpasshader, "in_Position", NULL,"in_TexCoord");
-   	}
-
-//activate the add-shader
-	//glClearColor(0.0, 0.0, 0.0, 0);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		
-   	glUseProgram(add);
-	useFBO(0L, fbo2, fbo1);
-	  
+		DrawModel(squareModel, lowpassX, "in_Position", NULL,"in_TexCoord");
+	   }
+	   
+	glFlush();
+//activate the add-shader	
+   glUseProgram(add);
+   glUniform1i(glGetUniformLocation(add,"glow"),1);
+	   
+	useFBO(fboFINAL, fbo2, fbo1);
 	DrawModel(squareModel, add, "in_Position", NULL, "in_TexCoord");
+
+	//Render final scene
+	useFBO(0L, fboFINAL, 0L);
+	glClearColor(0.0, 0.0, 0.0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glUseProgram(plaintextureshader);
+	DrawModel(squareModel, plaintextureshader, "in_Position", NULL,"in_TexCoord");
+
 	glutSwapBuffers();
+
+
 }
 
 void reshape(GLsizei w, GLsizei h)
