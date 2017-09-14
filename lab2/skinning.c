@@ -66,7 +66,8 @@ Point3D g_normalsRes[kMaxRow][kMaxCorners];
 // vertex attributes sent to OpenGL
 Point3D g_boneWeights[kMaxRow][kMaxCorners];
 
-float weight[kMaxRow] = {0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+float weight[kMaxRow] = {0.1, 0.2, 0.3, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 0.9};//{0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+//float Newweight[kMaxRow] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9};
 
 Model *cylinderModel; // Collects all the above for drawing with glDrawElements
 
@@ -191,6 +192,23 @@ void DeformCylinder()
 	// Point3D v1, v2;
 	int row, corner;
 	
+	//Translations
+	mat4 Tbone1 = T(g_bones[0].pos.x,g_bones[0].pos.y,g_bones[0].pos.z);
+	mat4 Tbone2 = T(g_bones[1].pos.x,g_bones[1].pos.y,g_bones[1].pos.z);
+	
+	//MbonN = TboneN*RboneN
+	mat4 Mbone1 = Mult(Tbone1, g_bones[0].rot);
+	mat4 Mbone2 = Mult(Tbone2, g_bones[1].rot);
+	
+	//inverse of MboneN
+	mat4 MIbone1 = InvertMat4(Mbone1);
+	mat4 MIbone2 = InvertMat4(Mbone2);
+	
+	//Mbone1' = Trest*Rrest*Ranim
+	mat4 MPbone1 = Mult(Mbone1, g_bones[0].rot);
+	mat4 MPbone2 = Mult(Mbone2, g_bones[1].rot);
+
+
 	// f�r samtliga vertexar 
 	for (row = 0; row < kMaxRow; row++)
 	{
@@ -210,30 +228,19 @@ void DeformCylinder()
 			//
 			// row traverserar i cylinderns l�ngdriktning,
 			// corner traverserar "runt" cylindern
-			
 	/*
-			float w = weight[row];
-			mat4 rotation;
-			vec3 translation;
-			if(w>0.9)
-			{
-				rotation = g_bones[1].rot;
-				translation = g_bones[1].pos;
-			}
-			else
-			{
-				rotation = g_bones[0].rot;
-				translation = g_bones[0].pos;				
-			}
-
-			vec3 transformedVertex =  VectorAdd( 
-				MultVec3(rotation, VectorSub(g_vertsOrg[row][corner], translation)),
-				translation
-			);
-			g_vertsRes[row][corner] = transformedVertex;
+			vec3 v = MultVec3(Mult(
+					Mult(MPbone1, MPbone2),
+					Mult(MIbone1, MIbone2)),
+				g_vertsOrg[row][corner]);
 			
+				if( weight[row]  > 0 ){
+					g_vertsRes[row][corner].x = v.x * weight[row];
+					g_vertsRes[row][corner].y = v.y * weight[row];
+					g_vertsRes[row][corner].z = v.z * weight[row];
+				}			
+				
 	*/
-			
 			// ---=========	Uppgift 2: Soft skinning i CPU ===========------
 			// Deformera cylindern enligt det skelett som finns
 			// i g_bones.
@@ -245,27 +252,11 @@ void DeformCylinder()
 			// g_vertsOrg inneh�ller ursprunglig vertexdata.
 			// g_vertsRes inneh�ller den vertexdata som skickas till OpenGL.
 			
-			float w0 = g_boneWeights[row][corner].x;
-			float w1 = g_boneWeights[row][corner].y;
-
-			vec4 point = vec3tovec4(g_vertsOrg[row][corner]);
-
-			mat4 rBone1 = g_bones[0].rot;
-			mat4 tBone1 = T(g_bones[0].pos.x, g_bones[0].pos.y, g_bones[0].pos.z);
-			mat4 reverseTBone1 = T(-g_bones[0].pos.x, -g_bones[0].pos.y, -g_bones[0].pos.z);
-			vec3 transformedFromBone1 = vec4tovec3(MultVec4(tBone1, MultVec4(rBone1, MultVec4(reverseTBone1, point))));
-
-			mat4 rBone2 = g_bones[1].rot;
-			mat4 tBone2 = T(g_bones[1].pos.x, g_bones[1].pos.y, g_bones[1].pos.z);
-			mat4 reverseTBone2 = T(-g_bones[1].pos.x, -g_bones[1].pos.y, -g_bones[1].pos.z);
-			vec3 transformedFromBone2 = vec4tovec3(MultVec4(tBone2, MultVec4(rBone2, MultVec4(reverseTBone2, point))));
-
-			vec3 transformedVertex =  VectorAdd( 
-				ScalarMult(transformedFromBone1, w0),
-				ScalarMult(transformedFromBone2, w1)
-			);
-			g_vertsRes[row][corner] = transformedVertex;
-	
+	/*		vec3 wm1 = ScalarMult(MultVec3(Mbone1, g_vertsOrg[row][corner]),1-weight[row]); 
+			vec3 wm2 = ScalarMult(MultVec3(Mbone2, g_vertsOrg[row][corner]),  weight[row]); 
+		
+			g_vertsRes[row][corner] = VectorAdd(wm1,wm2);
+	*/
 		}
 	}
 }
@@ -294,15 +285,15 @@ void animateBones(void)
 void setBoneRotation(void)
 {
 	// Uppgift 3 TODO: H�r beh�ver du skicka �ver benens rotation
-	/*/ till vertexshadern
+	// till vertexshadern
 
-	mat4 rBone2 = g_bones[1].rot;
-	mat4 tBone2 = T(g_bones[1].pos.x, g_bones[1].pos.y, g_bones[1].pos.z);
-	mat4 reverseTBone2 = T(-g_bones[1].pos.x, -g_bones[1].pos.y, -g_bones[1].pos.z);
-	mat4 transformationFromBone2 = Mult(tBone2, Mult(rBone2, reverseTBone2));
+
+	mat4 boneRotation = g_bones[1].rot;
+	mat4 bonePos = T(g_bones[1].pos.x, g_bones[1].pos.y, g_bones[1].pos.z);
+	mat4 reversebonePos = T(-g_bones[1].pos.x, -g_bones[1].pos.y, -g_bones[1].pos.z);
+	mat4 transformationFromBone = Mult(bonePos, Mult(boneRotation, reversebonePos));
 	
-	glUniformMatrix4fv(glGetUniformLocation(g_shader, "boneTransformation2"), 1, GL_TRUE, transformationFromBone2.m);
-	*/
+	glUniformMatrix4fv(glGetUniformLocation(g_shader, "boneRotation"), 1, GL_TRUE, transformationFromBone.m);
 }
 
 
@@ -312,14 +303,14 @@ void setBoneRotation(void)
 void setBoneLocation(void)
 {
 	// Uppgift 3 TODO: H�r beh�ver du skicka �ver benens position
-	/*/ till vertexshadern
-	mat4 rBone1 = g_bones[0].rot;
-	mat4 tBone1 = T(g_bones[0].pos.x, g_bones[0].pos.y, g_bones[0].pos.z);
-	mat4 reverseTBone1 = T(-g_bones[0].pos.x, -g_bones[0].pos.y, -g_bones[0].pos.z);
-	mat4 transformationFromBone1 = Mult(tBone1,Mult(rBone1,reverseTBone1));
+	// till vertexshadern
 
-	glUniformMatrix4fv(glGetUniformLocation(g_shader, "boneTransformation1"), 1, GL_TRUE, transformationFromBone1.m);
-	*/
+	mat4 boneRotation = g_bones[0].rot;
+	mat4 bonePos = T(g_bones[0].pos.x, g_bones[0].pos.y, g_bones[0].pos.z);
+	mat4 reversebonePos = T(-g_bones[0].pos.x, -g_bones[0].pos.y, -g_bones[0].pos.z);
+	mat4 boneTransformation = Mult(bonePos, Mult(boneRotation, reversebonePos));
+	
+	glUniformMatrix4fv(glGetUniformLocation(g_shader, "boneTransformation"), 1, GL_TRUE, boneTransformation.m);
 }
 
 

@@ -5,8 +5,9 @@ in vec3 in_Position;
 in vec3 in_Normal;
 in vec2 in_TexCoord;
 uniform mat4 matrix;
-uniform mat4 boneTransformation1;
-uniform mat4 boneTransformation2;
+
+uniform mat4 boneTransformation;
+uniform mat4 boneRotation;
 
 out vec4 g_color;
 const vec3 lightDir = normalize(vec3(0.3, 0.5, 1.0));
@@ -18,13 +19,12 @@ const vec3 lightDir = normalize(vec3(0.3, 0.5, 1.0));
 
 void main(void)
 {
-
-	vec4 color = vec4(in_TexCoord.x, in_TexCoord.y,0.0,1.0);
-	mat4 skinTrans = color.r * boneTransformation1 + color.g*boneTransformation2;
 	// transformera resultatet med ModelView- och Projection-matriserna
-	gl_Position = matrix * skinTrans * vec4(in_Position, 1.0);
 
 	// s�tt r�d+gr�n f�rgkanal till vertex Weights
+	vec4 color = vec4(in_TexCoord.x, in_TexCoord.y, 0.0, 1.0);
+
+	gl_Position = matrix * (in_TexCoord.x*boneTransformation + in_TexCoord.y *boneRotation)* vec4(in_Position, 1.0);
 
 	// L�gg p� en enkel ljuss�ttning p� vertexarna 	
 	float intensity = dot(in_Normal, lightDir);

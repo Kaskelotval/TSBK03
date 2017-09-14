@@ -252,7 +252,8 @@ void DeformCylinder()
 	mat4 Mmb[kMaxBones]; //matrix to transform bones->model coordinates
 	int bone;
 
-	for(bone = kMaxBones-1;bone	>	-1;bone--)
+		//from last bone to first bone
+	for(bone = kMaxBones-1; bone	>	-1; bone--)
 	{
 			vec3 restTranslation;
 			if(bone != 0) //if not the first bone
@@ -260,40 +261,45 @@ void DeformCylinder()
 			else //if the first bone
 				restTranslation = g_bonesRes[bone].pos;
 				
-			mat4 tRest = T(restTranslation.x, restTranslation.y,restTranslation.z); //resting translation
-			mat4 rRest = g_bones[bone].rot; //resting rotation
-			mat4 rAnim = g_bonesRes[bone].rot;
-			mat4 modifiedTransformation = Mult(tRest, Mult(rRest,rAnim)); //new transformation
+			mat4 transformRest = T(restTranslation.x, restTranslation.y,restTranslation.z); //resting translation
+			mat4 rotationRest = g_bones[bone].rot; //resting rotation
+			mat4 rotationAnim = g_bonesRes[bone].rot; //animated
+			// M'bone = tRest*rRest*rAnim
+			mat4 modifiedTransformation = Mult(transformRest, Mult(rotationRest,rotationAnim)); //new transformation
 
+			//Find the base rotation and translation
+			//	inverse and multiply 
 			vec3 basePosition = g_bones[bone].pos;
 			mat4 inverseBaseT = T(-basePosition.x, -basePosition.y,-basePosition.z);
 			mat4 baseRotation = g_bones[bone].rot;
 			mat4 inverseBaseR = Transpose(baseRotation);
+			//baseR^(-1) * baseT^(-1)
 			mat4 inverseBaseTransformation = Mult(inverseBaseR,inverseBaseT);
 
-			//put in information list
-			int i;
-			Mmb[bone] = inverseBaseTransformation;
-			Mbm[bone] = modifiedTransformation;
-			for(i = bone; i<kMaxBones;i++)
-			{
-				Mbm[i] = Mult(Mbm[bone],Mbm[i]);
-			}
+			//set Model->Bone transformation and Bone->model transformation
+			Mmb[bone] = inverseBaseTransformation; //model->bones coordinates
+			Mbm[bone] = modifiedTransformation; //bones->model
 
+			//check previous bones and set model coordinate:
+			for(int i = bone; i<kMaxBones;i++)
+			{
+					Mbm[i] = Mult(Mbm[bone],Mbm[i]);
+			}
 	}
-  // f�r samtliga vertexar 
+	// för samtliga vertexar 
+	//do v' = M1'*M2'*M2^(-1)*M1^(-1)*v
   for (row = 0; row < kMaxRow; row++)
   {
     for (corner = 0; corner < kMaxCorners; corner++)
     {
 			g_vertsRes[row][corner] = SetVector(0,0,0);
+			//loop over all bones
 			for(bone = 0; bone<kMaxBones; bone++)
 			{
-				float weight = g_boneWeights[row][corner][bone];
 				vec4 baseVert = vec3tovec4(g_vertsOrg[row][corner]);
 				mat4 transformation = Mult(Mbm[bone], Mmb[bone]);
 				vec4 transformedPoint = MultVec4(transformation,baseVert);
-				vec3 contribution = ScalarMult(vec4tovec3(transformedPoint),weight);
+				vec3 contribution = ScalarMult(vec4tovec3(transformedPoint),g_boneWeights[row][corner][bone]);
 				g_vertsRes[row][corner] = VectorAdd(g_vertsRes[row][corner],contribution);
 			}
     }
