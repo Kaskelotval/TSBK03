@@ -32,7 +32,7 @@ void main(void)
 		//transform the light vector using the mvt
 		light = mvt * light; //Lt = Mvt*L
 		vec3 unitNormal = normalize(vec3(ds.x, dt.x, 1.0)); //n' = n+ds*
-		out_Color = vec4( dot(unitNormal, light)) * texture(texUnit, outTexCoord);
+		out_Color = vec4( dot(unitNormal, light));
 		//===========================//
 	}
 	else

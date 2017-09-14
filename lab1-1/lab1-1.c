@@ -148,7 +148,6 @@ void display(void)
 	glUniform3fv(glGetUniformLocation(phongshader, "camPos"), 1, &cam.x);
 	glUniform1i(glGetUniformLocation(phongshader, "texUnit"), 0);
 
-	
 	// Enable Z-buffering
 	glEnable(GL_DEPTH_TEST);
 	// Enable backface culling
@@ -161,9 +160,7 @@ void display(void)
 
 	
 //Activate threshold shader
-
-	//glClearColor(0.0, 0.0, 0.0, 0);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
+//=================================//	
 	glUseProgram(thres);
 	glBindTexture(GL_TEXTURE_2D, fbo1->texid);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -173,11 +170,11 @@ void display(void)
 	DrawModel(squareModel, thres, "in_Position", NULL, "in_TexCoord");	
 
 //Activate lowpass shader
-
+//=================================//
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	
-	unsigned int amount = 40;
+	unsigned int amount = 10;
     for (unsigned int i = 0; i < amount; i++)
     {
 		glUseProgram(lowpassY);		
@@ -190,19 +187,22 @@ void display(void)
 	   }
 	   
 	glFlush();
-//activate the add-shader	
-   glUseProgram(add);
-   glUniform1i(glGetUniformLocation(add,"glow"),1);
+//activate the add-shader
+/*/=================================//	
+   	glUseProgram(add);
+   	glUniform1i(glGetUniformLocation(add,"glow"),1); //glow texUnit
 	   
-	useFBO(fboFINAL, fbo2, fbo1);
+	useFBO(fboFINAL, fbo2, fbo1); //Send in original and filtered -> get final
 	DrawModel(squareModel, add, "in_Position", NULL, "in_TexCoord");
 
-	//Render final scene
-	useFBO(0L, fboFINAL, 0L);
+//Render final scene
+//=================================/*/
+	glUseProgram(plaintextureshader);
+
+	useFBO(0L, fbo2, 0L);
 	glClearColor(0.0, 0.0, 0.0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glUseProgram(plaintextureshader);
 	DrawModel(squareModel, plaintextureshader, "in_Position", NULL,"in_TexCoord");
 
 	glutSwapBuffers();

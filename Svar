@@ -1,0 +1,34 @@
+
+1-1:
+	Hur ser högdagrarna ut i 1a?
+
+	    	Dom är väldigt väldigt begränsade, de är absolut vita med hårda kanter.
+
+	Hur allokerar man en tom textur?
+
+	    	glGenTextures(1, id);
+	    	glClearColor(0.0, 0.0, 0.0, 0);
+	    	glClear(GL_COLOR_BUFFER_BIT);
+
+	Hur många pass körde du lågpassfiltret i 1c och 1d?
+
+	    	Varierat, mellan 5->40. (bilden är 20/40)
+
+	Bör trunkeringen göras i egen shader eller som del av en shader som gör något mer?
+
+	   	Eftersom lowpass-filtret ska köras flera gånger kan man ej kombinera trunkeringen där utan att få filtret trunkerat
+		vid varje körning. Också fördel att hålla shaders korta.
+	 
+
+1-2:
+	Vilken bumpmappning tycker du är att föredra, vykoordinater eller texturkoordinater? Varför? Vad är skillnaden mellan att arbeta i vy- och 		texturkoordinater? Vilken bumpmappning (2a eller 2b) är lämplig för normalmapping?
+
+   		texturkoordinater
+
+	Definierar du bumpmappen som avstånd in i eller ut ur objektet? Var spelar det in?
+
+    		Både också, eftersom bumpmappen kan gå både in och ut.
+
+	Blev Mvt rätt med mat3 i 2b? Om inte, vad gjorde du åt det?
+
+   		Behövde transponeras

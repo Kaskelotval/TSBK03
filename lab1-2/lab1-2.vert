@@ -21,7 +21,7 @@ void main(void)
     out_Normal = mat3(viewMatrix) * in_Normal; // Cheated normal matrix, OK with no non-uniform scaling
     pixPos = vec3(viewMatrix * vec4(in_Position, 1.0));
 
-    //View coordinate vectors
+    //View coordinate vectors   
     Ps = normalize( mat3(viewMatrix) * Vs ); //normalMatrix * s
     Pt = normalize( mat3(viewMatrix) * Vt ); //normalMatrix * t
 
